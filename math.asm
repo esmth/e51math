@@ -18,6 +18,18 @@ shiftr16b:
 	djnz	r2, shiftr16b
 	ret
 
+; shift r4,5 left r2 times
+shiftl16b:
+	clr	c
+	xch	a, r5
+	rlc	a
+	xch	a, r5
+	xch	a, r4
+	rlc	a
+	xch	a, r4
+	djnz	r2, shiftl16b
+	ret
+
 ; maps a in range r6 to r7 to 0-255
 ; val in r5
 map8:
