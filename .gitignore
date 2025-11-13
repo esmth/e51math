@@ -1,0 +1,6 @@
+*.bin
+*.hex
+*.ihx
+*.lst
+*.rel
+*.sym
