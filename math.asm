@@ -200,117 +200,133 @@ div1616_3:
 
         ret
 
+; divide 32b by 16b
+; args
+; r3,2,1,0	dividend
+; r5,4		divisor
+; return
+; r3,2,1,0	quotient
+; r7,6,5,4	remainder
+; clobber
+; a, b,
 
-
-
-; subroutine UDIV32
-; 32-Bit / 16-Bit to 32-Bit Quotient & Remainder Unsigned Divide
-;
-; input: r3, r2, r1, r0 = Dividend X
-; r5, r4 = Divisor Y
-;
-; output: r3, r2, r1, r0 = quotient Q of division Q = X / Y
-; r7, r6, r5, r4 = remainder
-;
-; alters: acc, flags
 div3216:
-UDIV32:	push 0x08	;Save Register Bank 1
-push 0x09
-push 0x0a	
-push 0x0b	
-push 0x0c	
-push 0x0d	
-push 0x0e	
-push 0x0f	
-push	psw
-push dpl	
-push dph	
-push B	
-setb RS0	;Select Register Bank 1
-mov r7, #0	;clear partial remainder
-mov r6, #0	
-mov r5, #0	
-mov r4, #0	
-mov B, #32	;set loop count
-div_lp32:	clr RS0	;Select Register Bank 0
-clr C	;clear carry flag
-mov a, r0	;shift the highest bit of the
-rlc a	;dividend into...
-mov r0, a	
-mov a, r1	
-rlc a	
-mov r1, a	
-mov a, r2	
-rlc a	
-mov r2, a	
-mov a, r3	
-rlc a	
-mov r3, a	
-setb RS0	;Select Register Bank 1
-mov a, r4	;... the lowest bit of the
-rlc a	;partial remainder
-mov r4, a	
-mov a, r5	
-rlc a	
-mov r5, a	
-mov a, r6	
-rlc a	
-mov r6, a	
-mov a, r7	
-rlc a	
-mov r7, a	
-mov a, r4	;trial subtract divisor from
-clr C	;partial remainder
-subb a, 04	
-mov dpl, a	
-mov a, r5	
-subb a, 05	
-mov dph, a	
-mov a, r6	
-subb a, #0	
-mov 06, a	
-mov a, r7	
-subb a, #0	
-mov 07, a	
-cpl C	;complement external borrow
-jnc div_321	;update partial remainder if
-;borrow
-mov r7, 07	;update partial remainder
-mov r6, 06	
-mov r5, dph	
-mov r4, dpl	
-div_321:	mov a, r0	;shift result bit into partial
-rlc a	;quotient
-mov r0, a	
-mov a, r1	
-rlc a	
-mov r1, a	
-mov a, r2	
-rlc a	
-mov r2, a	
-mov a, r3	
-rlc a	
-mov r3, a	
-djnz B, div_lp32	
-mov 07, r7	;put remainder, saved before the
-mov 06, r6	;last subtraction, in bank 0
-mov 05, r5	
-mov 04, r4	
-mov 03, r3	;put quotient in bank 0
-mov 02, r2	
-mov 01, r1	
-mov 00, r0	
-clr RS0	
-pop B	
-pop dph	
-pop dpl	
-pop	psw
-pop 0x0f	;Retrieve Register Bank 1
-pop 0x0e
-pop 0x0d
-pop 0x0c
-pop 0x0b
-pop 0x0a
-pop 0x09
-pop 0x08
-ret
+	push	0x08
+	push	0x09
+	push	0x0a
+	push	0x0b
+	push	0x0c
+	push	0x0d
+	push	0x0e
+	push	0x0f
+	push	psw
+	push	dpl
+	push	dph
+	push	b
+	setb	RS0	; reg bank 1
+	; rb1r7-4 remainder work
+	mov	r7, #0
+	mov	r6, #0
+	mov	r5, #0
+	mov	r4, #0
+	mov	b, #32
+div3216_loop:
+	clr	RS0	; reg bank 0
+
+	; 64b shift left remainder:dividend << 1
+	; shift dividend left once
+	clr	c
+	mov	a, r0
+	rlc	a
+	mov	r0, a
+	mov	a, r1
+	rlc	a
+	mov	r1, a
+	mov	a, r2
+	rlc	a
+	mov	r2, a
+	mov	a, r3
+	rlc	a
+	mov	r3, a
+
+	setb	RS0	; reg bank 1
+	; shift remainder left once
+	mov	a, r4
+	rlc	a
+	mov	r4, a
+	mov	a, r5
+	rlc	a
+	mov	r5, a
+	mov	a, r6
+	rlc	a
+	mov	r6, a
+	mov	a, r7
+	rlc	a
+	mov	r7, a
+
+	; subtract divisor from remainder
+	mov	a, r4
+	clr	c
+	subb	a, 0x04
+	mov	dpl, a
+	mov	a, r5
+	subb	a, 0x05
+	mov	dph, a
+	mov	a, r6
+	subb	a, #0
+	mov	0x06, a
+	mov	a, r7
+	subb	a, #0
+	mov	0x07, a
+	cpl	c
+
+	jnc	div3216_nc
+
+	; save subtracted value back to remainder
+	mov	r7, 0x07
+	mov	r6, 0x06
+	mov	r5, dph
+	mov	r4, dpl
+
+div3216_nc:
+	; shift left quotient with result bit
+	mov 	a, r0
+	rlc 	a
+	mov 	r0, a
+	mov 	a, r1
+	rlc 	a
+	mov 	r1, a
+	mov 	a, r2
+	rlc 	a
+	mov 	r2, a
+	mov 	a, r3
+	rlc 	a
+	mov 	r3, a
+
+	djnz	b, div3216_loop
+
+	; move remainder
+	mov	0x07, r7
+	mov	0x06, r6
+	mov	0x05, r5
+	mov	0x04, r4
+	; move quotient
+	mov	0x03, r3
+	mov	0x02, r2
+	mov	0x01, r1
+	mov	0x00, r0
+
+	clr	RS0
+	pop	b
+	pop	dph
+	pop	dpl
+	pop	psw
+	pop	0x0f
+	pop	0x0e
+	pop	0x0d
+	pop	0x0c
+	pop	0x0b
+	pop	0x0a
+	pop	0x09
+	pop	0x08
+	ret
